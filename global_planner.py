@@ -3,7 +3,7 @@ import rospy
 import time
 import copy
 from enum import Enum
-from math import sqrt, pow
+from math import sqrt, pow, cos, sin
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Vector3
 from geometry_msgs.msg import Point
@@ -18,26 +18,45 @@ class GlobalPlanner:
 
         self.position = Vector3()
         self.grid = OccupancyGrid()
+        self.grid.info.width = rospy.get_param("/global_planner_node/map_width", 23)
+        self.grid.info.height = rospy.get_param("/global_planner_node/map_height", 23)
+
+        self.dist_to_objects = []
+        self.angle_min = None
+        self.angle_max = None
+        self.angle_increment = None
 
         self.mainloop()
 
     def processLidar(self, msg):
-      rospy.loginfo(msg)
+      self.dist_to_objects = msg.ranges
+      self.angle_min = msg.angle_min
+      self.angle_max = msg.angle_max
+      self.angle_increment = msg.angle_increment
+      self.scanArea()
     
     def processGPS(self, msg):
       self.position.x = msg.pose.position.x
       self.position.y = msg.pose.position.y
     
-    
-    
+    def scanArea(self):
+      curr_angle = self.angle_min
+      for dist in self.dist_to_objects:
+        if(dist == float('inf')):
+          break
+        x = cos(curr_angle) * dist
+        y = sin(curr_angle) * dist 
+        curr_angle += self.angle_increment
+        rospy.loginfo("X: " + str(x) + " | Y: " + str(y))
+
     # The main loop of the function
     def mainloop(self):
-        # Set the rate of this loop
-        rate = rospy.Rate(20)
+      # Set the rate of this loop
+      rate = rospy.Rate(20)
 
-        # While ROS is still running
-        while not rospy.is_shutdown():
-            pass
+      # While ROS is still running
+      while not rospy.is_shutdown():
+
         # Sleep for the remainder of the loop
         rate.sleep()
 
